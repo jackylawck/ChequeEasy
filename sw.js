@@ -6,7 +6,6 @@ const ASSETS = [
     './app.js'
 ];
 
-// 安裝並快取資源
 self.addEventListener('install', (e) => {
     e.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
@@ -15,7 +14,6 @@ self.addEventListener('install', (e) => {
     );
 });
 
-// 離線時直接從快取讀取資源
 self.addEventListener('fetch', (e) => {
     e.respondWith(
         caches.match(e.request).then((response) => {
