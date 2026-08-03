@@ -14,7 +14,7 @@
             <h1>ChequeEasy 支票易</h1>
             <div class="header-right">
                 <span class="security-badge" id="badgeText" data-zh="🔒 ISO 27001 資安標準 (100% 本地運算)" data-en="🔒 ISO 27001 Compliant (Local Only)">🔒 ISO 27001 資安標準 (100% 本地運算)</span>
-                <button id="langToggleBtn" class="lang-btn">English</button>
+                <button id="langToggleBtn" class="lang-btn" onclick="toggleLanguage()">English</button>
             </div>
         </div>
     </header>
@@ -22,8 +22,8 @@
     <main class="app-container">
         <!-- 分頁導航 -->
         <nav class="tabs">
-            <button class="tab-btn active" data-target="single-cheque" id="tabSingle" data-zh="📄 支票大寫轉換" data-en="📄 Cheque Convert">📄 支票大寫轉換</button>
-            <button class="tab-btn" data-target="bank-code" id="tabBank" data-zh="🏦 香港銀行代碼 (HKMA API)" data-en="🏦 HK Bank Code (HKMA API)">🏦 香港銀行代碼 (HKMA API)</button>
+            <button class="tab-btn active" data-target="single-cheque" id="tabSingle" onclick="switchTab('single-cheque', this)" data-zh="📄 支票大寫轉換" data-en="📄 Cheque Convert">📄 支票大寫轉換</button>
+            <button class="tab-btn" data-target="bank-code" id="tabBank" onclick="switchTab('bank-code', this)" data-zh="🏦 香港銀行代碼 (HKMA API)" data-en="🏦 HK Bank Code (HKMA API)">🏦 香港銀行代碼 (HKMA API)</button>
         </nav>
 
         <!-- 支票大寫轉換區 -->
@@ -31,8 +31,8 @@
             <div class="input-section">
                 <label for="amountInput" id="inputLabel" data-zh="請輸入阿拉伯數字：" data-en="Enter Amount (HKD):">請輸入阿拉伯數字：</label>
                 <div class="input-box">
-                    <input type="number" id="amountInput" placeholder="例如：123456789" step="0.01" min="0">
-                    <button id="convertBtn" class="primary-btn" data-zh="轉換" data-en="Convert">轉換</button>
+                    <input type="number" id="amountInput" placeholder="例如：123456789" step="0.01" min="0" oninput="handleConversion()">
+                    <button id="convertBtn" class="primary-btn" onclick="handleConversion()" data-zh="轉換" data-en="Convert">轉換</button>
                 </div>
             </div>
 
@@ -40,7 +40,7 @@
                 <h3 id="zhTitle" data-zh="中文大寫寫法：" data-en="Amount in Chinese Words:">中文大寫寫法：</h3>
                 <div class="result-box">
                     <input type="text" id="zhOutput" readonly placeholder="請先輸入阿拉伯數字，再按轉換">
-                    <button class="copy-btn" id="copyZhBtn" data-zh="複製" data-en="Copy">複製</button>
+                    <button class="copy-btn" onclick="copyToClipboard('zhOutput')" data-zh="複製" data-en="Copy">複製</button>
                 </div>
             </div>
 
@@ -48,7 +48,7 @@
                 <h3 id="enTitle" data-zh="英文大寫寫法 (English Words)：" data-en="Amount in English Words:">英文大寫寫法 (English Words)：</h3>
                 <div class="result-box">
                     <input type="text" id="enOutput" readonly placeholder="Result will appear here...">
-                    <button class="copy-btn" id="copyEnBtn" data-zh="複製" data-en="Copy">複製</button>
+                    <button class="copy-btn" onclick="copyToClipboard('enOutput')" data-zh="複製" data-en="Copy">複製</button>
                 </div>
             </div>
             
@@ -58,7 +58,7 @@
         <!-- 銀行代碼查詢區 -->
         <section id="bank-code" class="tab-content">
             <h2 id="bankTitle" data-zh="香港認可銀行代碼速查" data-en="HK Licensed Banks Directory">香港認可銀行代碼速查</h2>
-            <button id="fetchBankBtn" class="primary-btn" data-zh="📥 連線至金管局 (HKMA) 取得最新名單" data-en="📥 Fetch Latest List from HKMA API">📥 連線至金管局 (HKMA) 取得最新名單</button>
+            <button id="fetchBankBtn" class="primary-btn" onclick="fetchHKMABanks()" data-zh="📥 連線至金管局 (HKMA) 取得最新名單" data-en="📥 Fetch Latest List from HKMA API">📥 連線至金管局 (HKMA) 取得最新名單</button>
             <div id="bankListContainer" class="bank-list"></div>
         </section>
     </main>
