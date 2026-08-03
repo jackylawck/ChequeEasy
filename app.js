@@ -1,7 +1,217 @@
-// 金管局 API (精確解析 clearing_code 與 bank_name 專用版)
+let currentLang = 'zh';
+
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. 初始化分頁點擊事件
+    setupTabs();
+    
+    // 2. 綁定轉換按鈕 & Enter 鍵
+    const convertBtn = document.getElementById('convertBtn');
+    const amountInput = document.getElementById('amountInput');
+
+    if (convertBtn) convertBtn.addEventListener('click', handleConversion);
+    if (amountInput) {
+        amountInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleConversion();
+        });
+        // 加入即時輸入即時轉換（體驗更好）
+        amountInput.addEventListener('input', handleConversion);
+    }
+
+    // 3. 綁定一鍵複製按鈕
+    const copyZhBtn = document.getElementById('copyZhBtn');
+    const copyEnBtn = document.getElementById('copyEnBtn');
+    if (copyZhBtn) copyZhBtn.addEventListener('click', () => copyToClipboard('zhOutput'));
+    if (copyEnBtn) copyEnBtn.addEventListener('click', () => copyToClipboard('enOutput'));
+
+    // 4. 綁定語言切換按鈕
+    const langBtn = document.getElementById('langToggleBtn');
+    if (langBtn) langBtn.addEventListener('click', toggleLanguage);
+
+    // 5. 綁定金管局 API 按鈕
+    const fetchBankBtn = document.getElementById('fetchBankBtn');
+    if (fetchBankBtn) fetchBankBtn.addEventListener('click', fetchHKMABanks);
+});
+
+// 分頁切換功能
+function setupTabs() {
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabBtns.forEach(b => b.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+            
+            btn.classList.add('active');
+            const target = document.getElementById(btn.dataset.target);
+            if (target) target.classList.add('active');
+        });
+    });
+}
+
+// 語言切換
+function toggleLanguage() {
+    currentLang = (currentLang === 'zh') ? 'en' : 'zh';
+    const langBtn = document.getElementById('langToggleBtn');
+    if (langBtn) langBtn.textContent = (currentLang === 'zh') ? 'English' : '繁體中文';
+
+    const elementsToTranslate = document.querySelectorAll('[data-zh][data-en]');
+    elementsToTranslate.forEach(el => {
+        el.textContent = el.getAttribute(`data-${currentLang}`);
+    });
+
+    const amountInput = document.getElementById('amountInput');
+    const zhOutput = document.getElementById('zhOutput');
+
+    if (amountInput && zhOutput) {
+        if (currentLang === 'en') {
+            amountInput.placeholder = "e.g. 123456789";
+            if (!zhOutput.value) zhOutput.placeholder = "Result will appear here...";
+        } else {
+            amountInput.placeholder = "例如：123456789";
+            if (!zhOutput.value) zhOutput.placeholder = "請先輸入阿拉伯數字，再按轉換";
+        }
+    }
+}
+
+// 複製功能
+function copyToClipboard(elementId) {
+    const copyText = document.getElementById(elementId);
+    if (!copyText || !copyText.value) return;
+    
+    copyText.select();
+    navigator.clipboard.writeText(copyText.value)
+        .then(() => {
+            alert(currentLang === 'zh' ? "已複製大寫文字！" : "Text copied to clipboard!");
+        })
+        .catch(() => {
+            alert(currentLang === 'zh' ? "複製失敗，請手動選取複製。" : "Copy failed. Please copy manually.");
+        });
+}
+
+// 核心金額轉換
+function handleConversion() {
+    const inputField = document.getElementById('amountInput');
+    if (!inputField) return;
+
+    let value = parseFloat(inputField.value);
+    
+    if (isNaN(value) || value < 0) {
+        document.getElementById('zhOutput').value = "";
+        document.getElementById('enOutput').value = "";
+        return;
+    }
+
+    let amountStr = value.toFixed(2);
+    let [integerPart, decimalPart] = amountStr.split('.');
+
+    document.getElementById('zhOutput').value = convertToChineseCheque(integerPart, decimalPart);
+    document.getElementById('enOutput').value = convertToEnglishCheque(integerPart, decimalPart);
+}
+
+// 繁體中文大寫演算法
+function convertToChineseCheque(integerPart, decimalPart) {
+    const digits = ['零', '壹', '貳', '參', '肆', '伍', '陸', '柒', '捌', '玖'];
+    const units = ['', '拾', '佰', '仟'];
+    const bigUnits = ['', '萬', '億', '兆'];
+    
+    if (integerPart === '0' && decimalPart === '00') return '零元正';
+
+    let result = '';
+    let len = integerPart.length;
+
+    if (integerPart !== '0') {
+        let zeroFlag = false;
+        for (let i = 0; i < len; i++) {
+            let n = parseInt(integerPart[i]);
+            let pos = len - 1 - i;
+            let u = pos % 4;
+            let b = Math.floor(pos / 4);
+
+            if (n === 0) {
+                zeroFlag = true;
+            } else {
+                if (zeroFlag) {
+                    result += '零';
+                    zeroFlag = false;
+                }
+                result += digits[n] + units[u];
+            }
+
+            if (u === 0 && zeroFlag === false) {
+                result += bigUnits[b];
+            }
+        }
+        result += '元';
+    }
+
+    if (decimalPart === '00') {
+        result += '正';
+    } else {
+        let jiao = parseInt(decimalPart[0]);
+        let fen = parseInt(decimalPart[1]);
+        if (jiao > 0) result += digits[jiao] + '角';
+        if (fen > 0) result += digits[fen] + '分';
+        if (fen === 0) result += '正';
+    }
+
+    return result;
+}
+
+// 英文大寫演算法
+function convertToEnglishCheque(integerPart, decimalPart) {
+    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    const scales = ['', 'Thousand', 'Million', 'Billion', 'Trillion'];
+
+    function convertGroup(num) {
+        let res = '';
+        if (num >= 100) {
+            res += ones[Math.floor(num / 100)] + ' Hundred ';
+            num %= 100;
+        }
+        if (num > 0) {
+            if (num < 20) res += ones[num] + ' ';
+            else {
+                res += tens[Math.floor(num / 10)] + ' ';
+                if (num % 10 > 0) res += ones[num % 10] + ' ';
+            }
+        }
+        return res.trim();
+    }
+
+    let num = parseInt(integerPart, 10);
+    if (num === 0 && decimalPart === '00') return 'Zero Dollars Only';
+
+    let intResult = '';
+    let scaleIndex = 0;
+
+    while (num > 0) {
+        let chunk = num % 1000;
+        if (chunk > 0) {
+            let groupStr = convertGroup(chunk);
+            intResult = groupStr + (scales[scaleIndex] ? ' ' + scales[scaleIndex] : '') + ' ' + intResult;
+        }
+        num = Math.floor(num / 1000);
+        scaleIndex++;
+    }
+
+    intResult = intResult.trim() || 'Zero';
+    let finalStr = 'Say ' + intResult + ' Dollars';
+
+    if (decimalPart !== '00') {
+        let centsStr = convertGroup(parseInt(decimalPart, 10));
+        finalStr += ' and Cents ' + centsStr;
+    }
+
+    return finalStr + ' Only';
+}
+
+// 金管局 API (修復版)
 async function fetchHKMABanks() {
     const btn = document.getElementById('fetchBankBtn');
     const container = document.getElementById('bankListContainer');
+    if (!btn || !container) return;
     
     btn.textContent = currentLang === 'zh' ? "資料讀取中..." : "Loading data...";
     btn.disabled = true;
@@ -12,35 +222,24 @@ async function fetchHKMABanks() {
         const data = await response.json();
         
         const records = data.result.records || [];
-        
-        // 使用 Map 進行「銀行代碼/名稱」精確去重
         const bankMap = new Map();
 
         records.forEach(item => {
-            // 金管局 API 的真實欄位名稱
             const bName = item.bank_name || item.institution_name || '未知銀行';
-            // 優先讀取 clearing_code (即 3 位數銀行代碼，如 004, 024, 012)
             const bCode = item.clearing_code || item.bank_code || item.institution_code || '';
-
-            // 只要有銀行名稱，且 Map 裡面還沒有，就加進去
             if (bName && !bankMap.has(bName)) {
                 bankMap.set(bName, bCode);
             }
         });
 
-        // 取前 20 間不重複的銀行
         let html = '<ul style="list-style-type: none; padding-left: 0; margin-top: 15px;">';
-        
         let count = 0;
         for (let [name, code] of bankMap.entries()) {
             if (count >= 20) break;
-            
-            // 如果抓到了 clearing_code 就顯示 [004]，否則顯示 [HK]
             const displayCode = code ? `[${String(code).padStart(3, '0')}]` : '[HK]';
-
             html += `<li style="padding: 10px 0; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 12px;">
-                        <strong style="color: #003366; background: #e9ecef; padding: 3px 8px; border-radius: 4px; font-family: monospace; font-size: 0.95rem;">${displayCode}</strong> 
-                        <span style="font-size: 1rem; color: #222;">${name}</span>
+                        <strong style="color: #003366; background: #e9ecef; padding: 3px 8px; border-radius: 4px; font-family: monospace;">${displayCode}</strong> 
+                        <span>${name}</span>
                      </li>`;
             count++;
         }
@@ -58,4 +257,13 @@ async function fetchHKMABanks() {
         btn.textContent = currentLang === 'zh' ? "重新嘗試" : "Retry";
         btn.disabled = false;
     }
+}
+
+// 註冊 PWA
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+            .then(() => console.log('ChequeEasy Ready'))
+            .catch((err) => console.log('PWA Error:', err));
+    });
 }
