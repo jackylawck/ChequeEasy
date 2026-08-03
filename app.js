@@ -1,8 +1,10 @@
+// 全局語言狀態 (預設為 'zh')
+let currentLang = 'zh';
+
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. 初始化 Tab 分頁
     setupTabs();
     
-    // 2. 轉換觸發機制（按按鈕 或 按 Enter 鍵）
+    // 轉換按鈕與 Enter 鍵綁定
     const convertBtn = document.getElementById('convertBtn');
     const amountInput = document.getElementById('amountInput');
 
@@ -11,11 +13,43 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') handleConversion();
     });
 
-    // 3. 銀行代碼 API
+    // 語言切換按鈕綁定
+    const langBtn = document.getElementById('langToggleBtn');
+    langBtn.addEventListener('click', toggleLanguage);
+
+    // 銀行代碼 API
     document.getElementById('fetchBankBtn').addEventListener('click', fetchHKMABanks);
 });
 
-// Tab 切換
+// 語言切換邏輯
+function toggleLanguage() {
+    currentLang = (currentLang === 'zh') ? 'en' : 'zh';
+    const langBtn = document.getElementById('langToggleBtn');
+    
+    // 按鈕文字提示下一個可切換的語言
+    langBtn.textContent = (currentLang === 'zh') ? 'English' : '繁體中文';
+
+    // 動態替換所有帶有 data-zh 和 data-en 的文字
+    const elementsToTranslate = document.querySelectorAll('[data-zh][data-en]');
+    elementsToTranslate.forEach(el => {
+        el.textContent = el.getAttribute(`data-${currentLang}`);
+    });
+
+    // 動態更新輸入框的 Placeholder
+    const amountInput = document.getElementById('amountInput');
+    const zhOutput = document.getElementById('zhOutput');
+    const enOutput = document.getElementById('enOutput');
+
+    if (currentLang === 'en') {
+        amountInput.placeholder = "e.g. 123456789";
+        if (!zhOutput.value) zhOutput.placeholder = "Result will appear here...";
+    } else {
+        amountInput.placeholder = "例如：123456789";
+        if (!zhOutput.value) zhOutput.placeholder = "請先輸入阿拉伯數字，再按轉換";
+    }
+}
+
+// 分頁切換
 function setupTabs() {
     const tabBtns = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
@@ -38,8 +72,12 @@ function copyToClipboard(elementId) {
     
     copyText.select();
     navigator.clipboard.writeText(copyText.value)
-        .then(() => alert("已複製大寫文字！"))
-        .catch(() => alert("複製失敗，請手動選取複製。"));
+        .then(() => {
+            alert(currentLang === 'zh' ? "已複製大寫文字！" : "Text copied to clipboard!");
+        })
+        .catch(() => {
+            alert(currentLang === 'zh' ? "複製失敗，請手動複製。" : "Copy failed. Please copy manually.");
+        });
 }
 
 // 核心轉換控制
@@ -48,7 +86,7 @@ function handleConversion() {
     let value = parseFloat(inputField.value);
     
     if (isNaN(value) || value < 0) {
-        alert("請輸入有效的數字！");
+        alert(currentLang === 'zh' ? "請輸入有效的數字！" : "Please enter a valid number!");
         return;
     }
 
@@ -59,7 +97,7 @@ function handleConversion() {
     document.getElementById('enOutput').value = convertToEnglishCheque(integerPart, decimalPart);
 }
 
-// 繁體中文大寫演算法 (支援 萬/億/兆)
+// 繁體中文大寫演算法
 function convertToChineseCheque(integerPart, decimalPart) {
     const digits = ['零', '壹', '貳', '參', '肆', '伍', '陸', '柒', '捌', '玖'];
     const units = ['', '拾', '佰', '仟'];
@@ -74,9 +112,9 @@ function convertToChineseCheque(integerPart, decimalPart) {
         let zeroFlag = false;
         for (let i = 0; i < len; i++) {
             let n = parseInt(integerPart[i]);
-            let pos = len - 1 - i; // 位數位置
-            let u = pos % 4;       // 拾佰仟
-            let b = Math.floor(pos / 4); // 萬億兆
+            let pos = len - 1 - i;
+            let u = pos % 4;
+            let b = Math.floor(pos / 4);
 
             if (n === 0) {
                 zeroFlag = true;
@@ -95,7 +133,6 @@ function convertToChineseCheque(integerPart, decimalPart) {
         result += '元';
     }
 
-    // 處理角分
     if (decimalPart === '00') {
         result += '正';
     } else {
@@ -158,40 +195,41 @@ function convertToEnglishCheque(integerPart, decimalPart) {
     return finalStr + ' Only';
 }
 
-// 香港金管局 (HKMA) API 串接
+// 金管局 API
 async function fetchHKMABanks() {
     const btn = document.getElementById('fetchBankBtn');
     const container = document.getElementById('bankListContainer');
     
-    btn.textContent = "資料讀取中...";
+    btn.textContent = currentLang === 'zh' ? "資料讀取中..." : "Loading data...";
     btn.disabled = true;
 
     try {
-        const response = await fetch('https://api.hkma.gov.hk/public/bank-svf-info/banks-branch-locator?lang=tc');
+        const langParam = currentLang === 'zh' ? 'tc' : 'en';
+        const response = await fetch(`https://api.hkma.gov.hk/public/bank-svf-info/banks-branch-locator?lang=${langParam}`);
         const data = await response.json();
         
-        const records = data.result.records.slice(0, 10); // 取前 10 筆示範
+        const records = data.result.records.slice(0, 10);
         
         let html = '<ul>';
         records.forEach(item => {
             html += `<li><strong>${item.bankName}</strong></li>`;
         });
-        html += '</ul><p><em>（已成功連線至香港金管局 API 取得最新認可機構名單）</em></p>';
+        html += '</ul><p><em>' + (currentLang === 'zh' ? '（已成功連線至香港金管局 API 取得最新認可機構名單）' : '(Successfully connected to HKMA Open API)') + '</em></p>';
         
         container.innerHTML = html;
-        btn.textContent = "更新成功";
+        btn.textContent = currentLang === 'zh' ? "更新成功" : "Updated";
     } catch (err) {
-        container.innerHTML = '<p style="color:red;">無法連線至金管局 API，請檢查網絡連線。</p>';
-        btn.textContent = "重新嘗試";
+        container.innerHTML = '<p style="color:red;">' + (currentLang === 'zh' ? '無法連線至金管局 API，請檢查網絡連線。' : 'Failed to connect to HKMA API.') + '</p>';
+        btn.textContent = currentLang === 'zh' ? "重新嘗試" : "Retry";
         btn.disabled = false;
     }
 }
 
-// 註冊 Service Worker 以支援 100% 離線 PWA 存取
+// 註冊 Service Worker
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
-            .then(() => console.log('ChequeEasy 離線 PWA 模式啟用成功！'))
-            .catch((err) => console.log('PWA 註冊失敗:', err));
+            .then(() => console.log('ChequeEasy PWA Ready'))
+            .catch((err) => console.log('PWA Error:', err));
     });
 }
