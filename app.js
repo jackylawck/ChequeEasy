@@ -1,8 +1,6 @@
-// 全局語言狀態
-let currentLang = 'zh';
+var currentLang = 'zh';
 
-// 🏦 香港主要銀行內置對照表 (離線備用 & 代碼精確比對)
-const HK_BANK_DATABASE = [
+var HK_BANK_DATABASE = [
     { code: '004', nameZh: '香港上海滙豐銀行有限公司', nameEn: 'The Hongkong and Shanghai Banking Corporation Limited' },
     { code: '012', nameZh: '中國銀行(香港)有限公司', nameEn: 'Bank of China (Hong Kong) Limited' },
     { code: '003', nameZh: '渣打銀行(香港)有限公司', nameEn: 'Standard Chartered Bank (Hong Kong) Limited' },
@@ -18,72 +16,39 @@ const HK_BANK_DATABASE = [
     { code: '043', nameZh: '南洋商業銀行有限公司', nameEn: 'Nanyang Commercial Bank, Limited' },
     { code: '025', nameZh: '上海商業銀行有限公司', nameEn: 'Shanghai Commercial Bank Limited' },
     { code: '041', nameZh: '創興銀行有限公司', nameEn: 'Chong Hing Bank Limited' },
-    { code: '040', nameZh: '大新銀行有限公司', nameEn: 'Dah Sing Bank, Limited' },
-    { code: '387', nameZh: '眾安銀行有限公司 (ZA Bank)', nameEn: 'ZA Bank Limited' },
-    { code: '388', nameZh: '滙立銀行有限公司 (Airstar Bank)', nameEn: 'Airstar Bank Limited' },
-    { code: '389', nameZh: 'Mox Bank Limited', nameEn: 'Mox Bank Limited' },
-    { code: '390', nameZh: 'Livi Bank Limited', nameEn: 'Livi Bank Limited' }
+    { code: '040', nameZh: '大新銀行有限公司', nameEn: 'Dah Sing Bank, Limited' }
 ];
 
-document.addEventListener('DOMContentLoaded', () => {
-    setupTabs();
-    
-    const convertBtn = document.getElementById('convertBtn');
-    const amountInput = document.getElementById('amountInput');
-
-    if (convertBtn) convertBtn.addEventListener('click', handleConversion);
-    if (amountInput) {
-        amountInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') handleConversion();
-        });
-        amountInput.addEventListener('input', handleConversion);
-    }
-
-    const copyZhBtn = document.getElementById('copyZhBtn');
-    const copyEnBtn = document.getElementById('copyEnBtn');
-    if (copyZhBtn) copyZhBtn.addEventListener('click', () => copyToClipboard('zhOutput'));
-    if (copyEnBtn) copyEnBtn.addEventListener('click', () => copyToClipboard('enOutput'));
-
-    const langBtn = document.getElementById('langToggleBtn');
-    if (langBtn) langBtn.addEventListener('click', toggleLanguage);
-
-    const fetchBankBtn = document.getElementById('fetchBankBtn');
-    if (fetchBankBtn) fetchBankBtn.addEventListener('click', fetchHKMABanks);
-
-    // 頁面載入時預先印出內置銀行清單（離線亦可用）
+document.addEventListener('DOMContentLoaded', function() {
     renderBankList(HK_BANK_DATABASE, false);
 });
 
 // 分頁切換
-function setupTabs() {
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    const tabContents = document.querySelectorAll('.tab-content');
+function switchTab(targetId, btnElement) {
+    var tabBtns = document.querySelectorAll('.tab-btn');
+    var tabContents = document.querySelectorAll('.tab-content');
 
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            tabBtns.forEach(b => b.classList.remove('active'));
-            tabContents.forEach(c => c.classList.remove('active'));
-            
-            btn.classList.add('active');
-            const target = document.getElementById(btn.dataset.target);
-            if (target) target.classList.add('active');
-        });
-    });
+    tabBtns.forEach(function(b) { b.classList.remove('active'); });
+    tabContents.forEach(function(c) { c.classList.remove('active'); });
+
+    btnElement.classList.add('active');
+    var target = document.getElementById(targetId);
+    if (target) target.classList.add('active');
 }
 
 // 語言切換
 function toggleLanguage() {
     currentLang = (currentLang === 'zh') ? 'en' : 'zh';
-    const langBtn = document.getElementById('langToggleBtn');
+    var langBtn = document.getElementById('langToggleBtn');
     if (langBtn) langBtn.textContent = (currentLang === 'zh') ? 'English' : '繁體中文';
 
-    const elementsToTranslate = document.querySelectorAll('[data-zh][data-en]');
-    elementsToTranslate.forEach(el => {
-        el.textContent = el.getAttribute(`data-${currentLang}`);
+    var elementsToTranslate = document.querySelectorAll('[data-zh][data-en]');
+    elementsToTranslate.forEach(function(el) {
+        el.textContent = el.getAttribute('data-' + currentLang);
     });
 
-    const amountInput = document.getElementById('amountInput');
-    const zhOutput = document.getElementById('zhOutput');
+    var amountInput = document.getElementById('amountInput');
+    var zhOutput = document.getElementById('zhOutput');
 
     if (amountInput && zhOutput) {
         if (currentLang === 'en') {
@@ -95,31 +60,30 @@ function toggleLanguage() {
         }
     }
     
-    // 切換語言時同步重新渲染銀行列表
     renderBankList(HK_BANK_DATABASE, false);
 }
 
 // 複製功能
 function copyToClipboard(elementId) {
-    const copyText = document.getElementById(elementId);
+    var copyText = document.getElementById(elementId);
     if (!copyText || !copyText.value) return;
     
     copyText.select();
     navigator.clipboard.writeText(copyText.value)
-        .then(() => {
+        .then(function() {
             alert(currentLang === 'zh' ? "已複製大寫文字！" : "Text copied to clipboard!");
         })
-        .catch(() => {
-            alert(currentLang === 'zh' ? "複製失敗，請手動選取複製。" : "Copy failed. Please copy manually.");
+        .catch(function() {
+            alert(currentLang === 'zh' ? "複製失敗，請手動複製。" : "Copy failed. Please copy manually.");
         });
 }
 
-// 金額轉換邏輯
+// 核心金額轉換
 function handleConversion() {
-    const inputField = document.getElementById('amountInput');
+    var inputField = document.getElementById('amountInput');
     if (!inputField) return;
 
-    let value = parseFloat(inputField.value);
+    var value = parseFloat(inputField.value);
     
     if (isNaN(value) || value < 0) {
         document.getElementById('zhOutput').value = "";
@@ -127,31 +91,30 @@ function handleConversion() {
         return;
     }
 
-    let amountStr = value.toFixed(2);
-    let [integerPart, decimalPart] = amountStr.split('.');
+    var amountStr = value.toFixed(2);
+    var parts = amountStr.split('.');
 
-    document.getElementById('zhOutput').value = convertToChineseCheque(integerPart, decimalPart);
-    document.getElementById('enOutput').value = convertToEnglishCheque(integerPart, decimalPart);
+    document.getElementById('zhOutput').value = convertToChineseCheque(parts[0], parts[1]);
+    document.getElementById('enOutput').value = convertToEnglishCheque(parts[0], parts[1]);
 }
 
-// 繁體中文大寫演算法
 function convertToChineseCheque(integerPart, decimalPart) {
-    const digits = ['零', '壹', '貳', '參', '肆', '伍', '陸', '柒', '捌', '玖'];
-    const units = ['', '拾', '佰', '仟'];
-    const bigUnits = ['', '萬', '億', '兆'];
+    var digits = ['零', '壹', '貳', '參', '肆', '伍', '陸', '柒', '捌', '玖'];
+    var units = ['', '拾', '佰', '仟'];
+    var bigUnits = ['', '萬', '億', '兆'];
     
     if (integerPart === '0' && decimalPart === '00') return '零元正';
 
-    let result = '';
-    let len = integerPart.length;
+    var result = '';
+    var len = integerPart.length;
 
     if (integerPart !== '0') {
-        let zeroFlag = false;
-        for (let i = 0; i < len; i++) {
-            let n = parseInt(integerPart[i]);
-            let pos = len - 1 - i;
-            let u = pos % 4;
-            let b = Math.floor(pos / 4);
+        var zeroFlag = false;
+        for (var i = 0; i < len; i++) {
+            var n = parseInt(integerPart[i]);
+            var pos = len - 1 - i;
+            var u = pos % 4;
+            var b = Math.floor(pos / 4);
 
             if (n === 0) {
                 zeroFlag = true;
@@ -173,8 +136,8 @@ function convertToChineseCheque(integerPart, decimalPart) {
     if (decimalPart === '00') {
         result += '正';
     } else {
-        let jiao = parseInt(decimalPart[0]);
-        let fen = parseInt(decimalPart[1]);
+        var jiao = parseInt(decimalPart[0]);
+        var fen = parseInt(decimalPart[1]);
         if (jiao > 0) result += digits[jiao] + '角';
         if (fen > 0) result += digits[fen] + '分';
         if (fen === 0) result += '正';
@@ -183,14 +146,13 @@ function convertToChineseCheque(integerPart, decimalPart) {
     return result;
 }
 
-// 英文大寫演算法（現代標準，移除 Say）
 function convertToEnglishCheque(integerPart, decimalPart) {
-    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
-    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-    const scales = ['', 'Thousand', 'Million', 'Billion', 'Trillion'];
+    var ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+    var tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    var scales = ['', 'Thousand', 'Million', 'Billion', 'Trillion'];
 
     function convertGroup(num) {
-        let res = '';
+        var res = '';
         if (num >= 100) {
             res += ones[Math.floor(num / 100)] + ' Hundred ';
             num %= 100;
@@ -205,16 +167,16 @@ function convertToEnglishCheque(integerPart, decimalPart) {
         return res.trim();
     }
 
-    let num = parseInt(integerPart, 10);
+    var num = parseInt(integerPart, 10);
     if (num === 0 && decimalPart === '00') return 'Zero Dollars Only';
 
-    let intResult = '';
-    let scaleIndex = 0;
+    var intResult = '';
+    var scaleIndex = 0;
 
     while (num > 0) {
-        let chunk = num % 1000;
+        var chunk = num % 1000;
         if (chunk > 0) {
-            let groupStr = convertGroup(chunk);
+            var groupStr = convertGroup(chunk);
             intResult = groupStr + (scales[scaleIndex] ? ' ' + scales[scaleIndex] : '') + ' ' + intResult;
         }
         num = Math.floor(num / 1000);
@@ -222,64 +184,63 @@ function convertToEnglishCheque(integerPart, decimalPart) {
     }
 
     intResult = intResult.trim() || 'Zero';
-    let finalStr = intResult + ' Dollars';
+    var finalStr = intResult + ' Dollars';
 
     if (decimalPart !== '00') {
-        let centsNum = parseInt(decimalPart, 10);
-        let centsStr = convertGroup(centsNum);
+        var centsNum = parseInt(decimalPart, 10);
+        var centsStr = convertGroup(centsNum);
         finalStr += ' and Cents ' + centsStr;
     }
 
     return finalStr + ' Only';
 }
 
-// 渲染銀行列表
-function renderBankList(bankData, isFromApi = false) {
-    const container = document.getElementById('bankListContainer');
+function renderBankList(bankData, isFromApi) {
+    var container = document.getElementById('bankListContainer');
     if (!container) return;
 
-    let html = '<ul style="list-style-type: none; padding-left: 0; margin-top: 15px;">';
+    var html = '<ul style="list-style-type: none; padding-left: 0; margin-top: 15px;">';
     
-    bankData.forEach(item => {
-        const name = (currentLang === 'zh') ? (item.nameZh || item.name) : (item.nameEn || item.name);
-        html += `<li style="padding: 10px 0; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 12px;">
-                    <strong style="color: #003366; background: #e9ecef; padding: 3px 8px; border-radius: 4px; font-family: monospace; font-size: 0.95rem;">[${item.code}]</strong> 
-                    <span style="font-size: 1rem; color: #222;">${name}</span>
-                 </li>`;
+    bankData.forEach(function(item) {
+        var name = (currentLang === 'zh') ? (item.nameZh || item.name) : (item.nameEn || item.name);
+        html += '<li style="padding: 10px 0; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 12px;">' +
+                    '<strong style="color: #003366; background: #e9ecef; padding: 3px 8px; border-radius: 4px; font-family: monospace;">[' + item.code + ']</strong> ' +
+                    '<span style="font-size: 1rem; color: #222;">' + name + '</span>' +
+                 '</li>';
     });
 
-    const note = isFromApi 
+    var note = isFromApi 
         ? (currentLang === 'zh' ? '（已成功連線至香港金管局 API 取得最新名單）' : '(Successfully updated from HKMA Open API)')
         : (currentLang === 'zh' ? '（目前顯示內置常規銀行代碼對照表）' : '(Showing offline built-in bank directory)');
 
-    html += `</ul><p style="margin-top: 15px; font-size: 0.85rem; color: #666;"><em>${note}</em></p>`;
+    html += '</ul><p style="margin-top: 15px; font-size: 0.85rem; color: #666;"><em>' + note + '</em></p>';
     container.innerHTML = html;
 }
 
-// 金管局 API 串接（有網時更新，無網時自動 fallback 使用內置資料）
 async function fetchHKMABanks() {
-    const btn = document.getElementById('fetchBankBtn');
+    var btn = document.getElementById('fetchBankBtn');
     if (!btn) return;
     
     btn.textContent = currentLang === 'zh' ? "資料讀取中..." : "Loading data...";
     btn.disabled = true;
 
     try {
-        const langParam = currentLang === 'zh' ? 'tc' : 'en';
-        const response = await fetch(`https://api.hkma.gov.hk/public/bank-svf-info/banks-branch-locator?lang=${langParam}`);
-        const data = await response.json();
+        var langParam = currentLang === 'zh' ? 'tc' : 'en';
+        var response = await fetch('https://api.hkma.gov.hk/public/bank-svf-info/banks-branch-locator?lang=' + langParam);
+        var data = await response.json();
         
-        const records = data.result.records || [];
-        const apiBanks = [];
-        const seenNames = new Set();
+        var records = data.result.records || [];
+        var apiBanks = [];
+        var seenNames = new Set();
 
-        records.forEach(item => {
-            const bName = item.bank_name || item.institution_name || '';
-            let bCode = item.clearing_code || item.bank_code || item.institution_code || '';
+        records.forEach(function(item) {
+            var bName = item.bank_name || item.institution_name || '';
+            var bCode = item.clearing_code || item.bank_code || item.institution_code || '';
 
-            // 如果 API 沒給 Code，用內置資料對照補齊
             if (!bCode && bName) {
-                const found = HK_BANK_DATABASE.find(db => bName.includes(db.nameZh) || bName.includes(db.nameEn));
+                var found = HK_BANK_DATABASE.find(function(db) {
+                    return bName.includes(db.nameZh) || bName.includes(db.nameEn);
+                });
                 if (found) bCode = found.code;
             }
 
@@ -302,13 +263,4 @@ async function fetchHKMABanks() {
     } finally {
         btn.disabled = false;
     }
-}
-
-// 註冊 Service Worker
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-            .then(() => console.log('ChequeEasy Ready'))
-            .catch((err) => console.log('PWA Error:', err));
-    });
 }
