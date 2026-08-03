@@ -1,4 +1,189 @@
-// 英文大寫演算法 (現代標準格式，移除 Say)
+// 全局語言狀態
+let currentLang = 'zh';
+
+// 🏦 香港主要銀行內置對照表 (離線備用 & 代碼精確比對)
+const HK_BANK_DATABASE = [
+    { code: '004', nameZh: '香港上海滙豐銀行有限公司', nameEn: 'The Hongkong and Shanghai Banking Corporation Limited' },
+    { code: '012', nameZh: '中國銀行(香港)有限公司', nameEn: 'Bank of China (Hong Kong) Limited' },
+    { code: '003', nameZh: '渣打銀行(香港)有限公司', nameEn: 'Standard Chartered Bank (Hong Kong) Limited' },
+    { code: '024', nameZh: '恒生銀行有限公司', nameEn: 'Hang Seng Bank Limited' },
+    { code: '015', nameZh: '東亞銀行有限公司', nameEn: 'The Bank of East Asia, Limited' },
+    { code: '035', nameZh: '華僑銀行(香港)有限公司', nameEn: 'OCBC Bank (Hong Kong) Limited' },
+    { code: '020', nameZh: '招商永隆銀行有限公司', nameEn: 'CMB Wing Lung Bank Limited' },
+    { code: '039', nameZh: '集友銀行有限公司', nameEn: 'Chiyu Banking Corporation Limited' },
+    { code: '028', nameZh: '大眾銀行(香港)有限公司', nameEn: 'Public Bank (Hong Kong) Limited' },
+    { code: '072', nameZh: '中國工商銀行(亞洲)有限公司', nameEn: 'Industrial and Commercial Bank of China (Asia) Limited' },
+    { code: '006', nameZh: '花旗銀行(香港)有限公司', nameEn: 'Citibank (Hong Kong) Limited' },
+    { code: '016', nameZh: '星展銀行(香港)有限公司', nameEn: 'DBS Bank (Hong Kong) Limited' },
+    { code: '043', nameZh: '南洋商業銀行有限公司', nameEn: 'Nanyang Commercial Bank, Limited' },
+    { code: '025', nameZh: '上海商業銀行有限公司', nameEn: 'Shanghai Commercial Bank Limited' },
+    { code: '041', nameZh: '創興銀行有限公司', nameEn: 'Chong Hing Bank Limited' },
+    { code: '040', nameZh: '大新銀行有限公司', nameEn: 'Dah Sing Bank, Limited' },
+    { code: '387', nameZh: '眾安銀行有限公司 (ZA Bank)', nameEn: 'ZA Bank Limited' },
+    { code: '388', nameZh: '滙立銀行有限公司 (Airstar Bank)', nameEn: 'Airstar Bank Limited' },
+    { code: '389', nameZh: 'Mox Bank Limited', nameEn: 'Mox Bank Limited' },
+    { code: '390', nameZh: 'Livi Bank Limited', nameEn: 'Livi Bank Limited' }
+];
+
+document.addEventListener('DOMContentLoaded', () => {
+    setupTabs();
+    
+    const convertBtn = document.getElementById('convertBtn');
+    const amountInput = document.getElementById('amountInput');
+
+    if (convertBtn) convertBtn.addEventListener('click', handleConversion);
+    if (amountInput) {
+        amountInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleConversion();
+        });
+        amountInput.addEventListener('input', handleConversion);
+    }
+
+    const copyZhBtn = document.getElementById('copyZhBtn');
+    const copyEnBtn = document.getElementById('copyEnBtn');
+    if (copyZhBtn) copyZhBtn.addEventListener('click', () => copyToClipboard('zhOutput'));
+    if (copyEnBtn) copyEnBtn.addEventListener('click', () => copyToClipboard('enOutput'));
+
+    const langBtn = document.getElementById('langToggleBtn');
+    if (langBtn) langBtn.addEventListener('click', toggleLanguage);
+
+    const fetchBankBtn = document.getElementById('fetchBankBtn');
+    if (fetchBankBtn) fetchBankBtn.addEventListener('click', fetchHKMABanks);
+
+    // 頁面載入時預先印出內置銀行清單（離線亦可用）
+    renderBankList(HK_BANK_DATABASE, false);
+});
+
+// 分頁切換
+function setupTabs() {
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabBtns.forEach(b => b.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+            
+            btn.classList.add('active');
+            const target = document.getElementById(btn.dataset.target);
+            if (target) target.classList.add('active');
+        });
+    });
+}
+
+// 語言切換
+function toggleLanguage() {
+    currentLang = (currentLang === 'zh') ? 'en' : 'zh';
+    const langBtn = document.getElementById('langToggleBtn');
+    if (langBtn) langBtn.textContent = (currentLang === 'zh') ? 'English' : '繁體中文';
+
+    const elementsToTranslate = document.querySelectorAll('[data-zh][data-en]');
+    elementsToTranslate.forEach(el => {
+        el.textContent = el.getAttribute(`data-${currentLang}`);
+    });
+
+    const amountInput = document.getElementById('amountInput');
+    const zhOutput = document.getElementById('zhOutput');
+
+    if (amountInput && zhOutput) {
+        if (currentLang === 'en') {
+            amountInput.placeholder = "e.g. 123456789";
+            if (!zhOutput.value) zhOutput.placeholder = "Result will appear here...";
+        } else {
+            amountInput.placeholder = "例如：123456789";
+            if (!zhOutput.value) zhOutput.placeholder = "請先輸入阿拉伯數字，再按轉換";
+        }
+    }
+    
+    // 切換語言時同步重新渲染銀行列表
+    renderBankList(HK_BANK_DATABASE, false);
+}
+
+// 複製功能
+function copyToClipboard(elementId) {
+    const copyText = document.getElementById(elementId);
+    if (!copyText || !copyText.value) return;
+    
+    copyText.select();
+    navigator.clipboard.writeText(copyText.value)
+        .then(() => {
+            alert(currentLang === 'zh' ? "已複製大寫文字！" : "Text copied to clipboard!");
+        })
+        .catch(() => {
+            alert(currentLang === 'zh' ? "複製失敗，請手動選取複製。" : "Copy failed. Please copy manually.");
+        });
+}
+
+// 金額轉換邏輯
+function handleConversion() {
+    const inputField = document.getElementById('amountInput');
+    if (!inputField) return;
+
+    let value = parseFloat(inputField.value);
+    
+    if (isNaN(value) || value < 0) {
+        document.getElementById('zhOutput').value = "";
+        document.getElementById('enOutput').value = "";
+        return;
+    }
+
+    let amountStr = value.toFixed(2);
+    let [integerPart, decimalPart] = amountStr.split('.');
+
+    document.getElementById('zhOutput').value = convertToChineseCheque(integerPart, decimalPart);
+    document.getElementById('enOutput').value = convertToEnglishCheque(integerPart, decimalPart);
+}
+
+// 繁體中文大寫演算法
+function convertToChineseCheque(integerPart, decimalPart) {
+    const digits = ['零', '壹', '貳', '參', '肆', '伍', '陸', '柒', '捌', '玖'];
+    const units = ['', '拾', '佰', '仟'];
+    const bigUnits = ['', '萬', '億', '兆'];
+    
+    if (integerPart === '0' && decimalPart === '00') return '零元正';
+
+    let result = '';
+    let len = integerPart.length;
+
+    if (integerPart !== '0') {
+        let zeroFlag = false;
+        for (let i = 0; i < len; i++) {
+            let n = parseInt(integerPart[i]);
+            let pos = len - 1 - i;
+            let u = pos % 4;
+            let b = Math.floor(pos / 4);
+
+            if (n === 0) {
+                zeroFlag = true;
+            } else {
+                if (zeroFlag) {
+                    result += '零';
+                    zeroFlag = false;
+                }
+                result += digits[n] + units[u];
+            }
+
+            if (u === 0 && zeroFlag === false) {
+                result += bigUnits[b];
+            }
+        }
+        result += '元';
+    }
+
+    if (decimalPart === '00') {
+        result += '正';
+    } else {
+        let jiao = parseInt(decimalPart[0]);
+        let fen = parseInt(decimalPart[1]);
+        if (jiao > 0) result += digits[jiao] + '角';
+        if (fen > 0) result += digits[fen] + '分';
+        if (fen === 0) result += '正';
+    }
+
+    return result;
+}
+
+// 英文大寫演算法（現代標準，移除 Say）
 function convertToEnglishCheque(integerPart, decimalPart) {
     const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
     const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
@@ -37,8 +222,6 @@ function convertToEnglishCheque(integerPart, decimalPart) {
     }
 
     intResult = intResult.trim() || 'Zero';
-    
-    // 直接從金額開始，不加 Say
     let finalStr = intResult + ' Dollars';
 
     if (decimalPart !== '00') {
@@ -48,4 +231,84 @@ function convertToEnglishCheque(integerPart, decimalPart) {
     }
 
     return finalStr + ' Only';
+}
+
+// 渲染銀行列表
+function renderBankList(bankData, isFromApi = false) {
+    const container = document.getElementById('bankListContainer');
+    if (!container) return;
+
+    let html = '<ul style="list-style-type: none; padding-left: 0; margin-top: 15px;">';
+    
+    bankData.forEach(item => {
+        const name = (currentLang === 'zh') ? (item.nameZh || item.name) : (item.nameEn || item.name);
+        html += `<li style="padding: 10px 0; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 12px;">
+                    <strong style="color: #003366; background: #e9ecef; padding: 3px 8px; border-radius: 4px; font-family: monospace; font-size: 0.95rem;">[${item.code}]</strong> 
+                    <span style="font-size: 1rem; color: #222;">${name}</span>
+                 </li>`;
+    });
+
+    const note = isFromApi 
+        ? (currentLang === 'zh' ? '（已成功連線至香港金管局 API 取得最新名單）' : '(Successfully updated from HKMA Open API)')
+        : (currentLang === 'zh' ? '（目前顯示內置常規銀行代碼對照表）' : '(Showing offline built-in bank directory)');
+
+    html += `</ul><p style="margin-top: 15px; font-size: 0.85rem; color: #666;"><em>${note}</em></p>`;
+    container.innerHTML = html;
+}
+
+// 金管局 API 串接（有網時更新，無網時自動 fallback 使用內置資料）
+async function fetchHKMABanks() {
+    const btn = document.getElementById('fetchBankBtn');
+    if (!btn) return;
+    
+    btn.textContent = currentLang === 'zh' ? "資料讀取中..." : "Loading data...";
+    btn.disabled = true;
+
+    try {
+        const langParam = currentLang === 'zh' ? 'tc' : 'en';
+        const response = await fetch(`https://api.hkma.gov.hk/public/bank-svf-info/banks-branch-locator?lang=${langParam}`);
+        const data = await response.json();
+        
+        const records = data.result.records || [];
+        const apiBanks = [];
+        const seenNames = new Set();
+
+        records.forEach(item => {
+            const bName = item.bank_name || item.institution_name || '';
+            let bCode = item.clearing_code || item.bank_code || item.institution_code || '';
+
+            // 如果 API 沒給 Code，用內置資料對照補齊
+            if (!bCode && bName) {
+                const found = HK_BANK_DATABASE.find(db => bName.includes(db.nameZh) || bName.includes(db.nameEn));
+                if (found) bCode = found.code;
+            }
+
+            if (bName && !seenNames.has(bName)) {
+                seenNames.add(bName);
+                apiBanks.push({ code: bCode || '004', name: bName });
+            }
+        });
+
+        if (apiBanks.length > 0) {
+            renderBankList(apiBanks.slice(0, 20), true);
+            btn.textContent = currentLang === 'zh' ? "更新成功" : "Updated";
+        } else {
+            throw new Error("No data");
+        }
+    } catch (err) {
+        console.warn("API Offline, using local fallback database", err);
+        renderBankList(HK_BANK_DATABASE, false);
+        btn.textContent = currentLang === 'zh' ? "離線模式 (已使用內置資料)" : "Offline Mode (Built-in)";
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+// 註冊 Service Worker
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+            .then(() => console.log('ChequeEasy Ready'))
+            .catch((err) => console.log('PWA Error:', err));
+    });
 }
