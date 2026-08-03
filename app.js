@@ -19,24 +19,70 @@ var HK_BANK_DATABASE = [
     { code: '040', nameZh: '大新銀行有限公司', nameEn: 'Dah Sing Bank, Limited' }
 ];
 
+// 頁面加載後綁定所有事件（完全避開行內 onclick 的 CSP 限制）
 document.addEventListener('DOMContentLoaded', function() {
+    // 預先印出銀行列表
     renderBankList(HK_BANK_DATABASE, false);
+
+    // 1. 綁定轉換按鈕與輸入框事件
+    var convertBtn = document.getElementById('convertBtn');
+    var amountInput = document.getElementById('amountInput');
+
+    if (convertBtn) {
+        convertBtn.addEventListener('click', handleConversion);
+    }
+    if (amountInput) {
+        amountInput.addEventListener('input', handleConversion);
+        amountInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') handleConversion();
+        });
+    }
+
+    // 2. 綁定複製按鈕
+    var copyZhBtn = document.getElementById('copyZhBtn');
+    var copyEnBtn = document.getElementById('copyEnBtn');
+
+    if (copyZhBtn) {
+        copyZhBtn.addEventListener('click', function() { copyToClipboard('zhOutput'); });
+    }
+    if (copyEnBtn) {
+        copyEnBtn.addEventListener('click', function() { copyToClipboard('enOutput'); });
+    }
+
+    // 3. 綁定語言切換
+    var langBtn = document.getElementById('langToggleBtn');
+    if (langBtn) {
+        langBtn.addEventListener('click', toggleLanguage);
+    }
+
+    // 4. 綁定分頁按鈕
+    var tabBtns = document.querySelectorAll('.tab-btn');
+    tabBtns.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var targetId = this.getAttribute('data-target');
+            switchTab(targetId, this);
+        });
+    });
+
+    // 5. 綁定 API 按鈕
+    var fetchBankBtn = document.getElementById('fetchBankBtn');
+    if (fetchBankBtn) {
+        fetchBankBtn.addEventListener('click', fetchHKMABanks);
+    }
 });
 
-// 分頁切換
-function switchTab(targetId, btnElement) {
+function switchTab(targetId, clickedBtn) {
     var tabBtns = document.querySelectorAll('.tab-btn');
     var tabContents = document.querySelectorAll('.tab-content');
 
     tabBtns.forEach(function(b) { b.classList.remove('active'); });
     tabContents.forEach(function(c) { c.classList.remove('active'); });
 
-    btnElement.classList.add('active');
+    clickedBtn.classList.add('active');
     var target = document.getElementById(targetId);
     if (target) target.classList.add('active');
 }
 
-// 語言切換
 function toggleLanguage() {
     currentLang = (currentLang === 'zh') ? 'en' : 'zh';
     var langBtn = document.getElementById('langToggleBtn');
@@ -63,7 +109,6 @@ function toggleLanguage() {
     renderBankList(HK_BANK_DATABASE, false);
 }
 
-// 複製功能
 function copyToClipboard(elementId) {
     var copyText = document.getElementById(elementId);
     if (!copyText || !copyText.value) return;
@@ -78,7 +123,6 @@ function copyToClipboard(elementId) {
         });
 }
 
-// 核心金額轉換
 function handleConversion() {
     var inputField = document.getElementById('amountInput');
     if (!inputField) return;
