@@ -1,10 +1,8 @@
-// 全局語言狀態 (預設為 'zh')
 let currentLang = 'zh';
 
 document.addEventListener('DOMContentLoaded', () => {
     setupTabs();
     
-    // 轉換按鈕與 Enter 鍵綁定
     const convertBtn = document.getElementById('convertBtn');
     const amountInput = document.getElementById('amountInput');
 
@@ -13,32 +11,25 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') handleConversion();
     });
 
-    // 語言切換按鈕綁定
     const langBtn = document.getElementById('langToggleBtn');
     langBtn.addEventListener('click', toggleLanguage);
 
-    // 銀行代碼 API
     document.getElementById('fetchBankBtn').addEventListener('click', fetchHKMABanks);
 });
 
-// 語言切換邏輯
 function toggleLanguage() {
     currentLang = (currentLang === 'zh') ? 'en' : 'zh';
     const langBtn = document.getElementById('langToggleBtn');
     
-    // 按鈕文字提示下一個可切換的語言
     langBtn.textContent = (currentLang === 'zh') ? 'English' : '繁體中文';
 
-    // 動態替換所有帶有 data-zh 和 data-en 的文字
     const elementsToTranslate = document.querySelectorAll('[data-zh][data-en]');
     elementsToTranslate.forEach(el => {
         el.textContent = el.getAttribute(`data-${currentLang}`);
     });
 
-    // 動態更新輸入框的 Placeholder
     const amountInput = document.getElementById('amountInput');
     const zhOutput = document.getElementById('zhOutput');
-    const enOutput = document.getElementById('enOutput');
 
     if (currentLang === 'en') {
         amountInput.placeholder = "e.g. 123456789";
@@ -49,7 +40,6 @@ function toggleLanguage() {
     }
 }
 
-// 分頁切換
 function setupTabs() {
     const tabBtns = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
@@ -65,7 +55,6 @@ function setupTabs() {
     });
 }
 
-// 複製到剪貼簿
 function copyToClipboard(elementId) {
     const copyText = document.getElementById(elementId);
     if (!copyText.value) return;
@@ -80,7 +69,6 @@ function copyToClipboard(elementId) {
         });
 }
 
-// 核心轉換控制
 function handleConversion() {
     const inputField = document.getElementById('amountInput');
     let value = parseFloat(inputField.value);
@@ -97,7 +85,6 @@ function handleConversion() {
     document.getElementById('enOutput').value = convertToEnglishCheque(integerPart, decimalPart);
 }
 
-// 繁體中文大寫演算法
 function convertToChineseCheque(integerPart, decimalPart) {
     const digits = ['零', '壹', '貳', '參', '肆', '伍', '陸', '柒', '捌', '玖'];
     const units = ['', '拾', '佰', '仟'];
@@ -146,7 +133,6 @@ function convertToChineseCheque(integerPart, decimalPart) {
     return result;
 }
 
-// 英文大寫演算法
 function convertToEnglishCheque(integerPart, decimalPart) {
     const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
     const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
@@ -195,7 +181,7 @@ function convertToEnglishCheque(integerPart, decimalPart) {
     return finalStr + ' Only';
 }
 
-// 金管局 API
+// 金管局 API (修復 undefined 並精確印出 [Bank Code] + Bank Name)
 async function fetchHKMABanks() {
     const btn = document.getElementById('fetchBankBtn');
     const container = document.getElementById('bankListContainer');
@@ -208,24 +194,33 @@ async function fetchHKMABanks() {
         const response = await fetch(`https://api.hkma.gov.hk/public/bank-svf-info/banks-branch-locator?lang=${langParam}`);
         const data = await response.json();
         
-        const records = data.result.records.slice(0, 10);
+        const records = data.result.records.slice(0, 15);
         
-        let html = '<ul>';
+        let html = '<ul style="list-style-type: none; padding-left: 0;">';
         records.forEach(item => {
-            html += `<li><strong>${item.bankName}</strong></li>`;
+            // 解析金管局正確的 JSON 屬性欄位
+            const bName = item.bank_name || item.bankName || '未知銀行';
+            const bCode = item.bank_code || item.bankCode || '---';
+            
+            html += `<li style="padding: 8px 0; border-bottom: 1px solid #eee;">
+                        <strong style="color: #003366;">[${bCode}]</strong> ${bName}
+                     </li>`;
         });
-        html += '</ul><p><em>' + (currentLang === 'zh' ? '（已成功連線至香港金管局 API 取得最新認可機構名單）' : '(Successfully connected to HKMA Open API)') + '</em></p>';
+        html += '</ul><p style="margin-top: 15px; font-size: 0.85rem; color: #666;"><em>' + 
+                (currentLang === 'zh' ? '（已成功連線至香港金管局 API 取得最新認可機構名單）' : '(Successfully connected to HKMA Open API)') + 
+                '</em></p>';
         
         container.innerHTML = html;
         btn.textContent = currentLang === 'zh' ? "更新成功" : "Updated";
     } catch (err) {
+        console.error("API Error:", err);
         container.innerHTML = '<p style="color:red;">' + (currentLang === 'zh' ? '無法連線至金管局 API，請檢查網絡連線。' : 'Failed to connect to HKMA API.') + '</p>';
         btn.textContent = currentLang === 'zh' ? "重新嘗試" : "Retry";
         btn.disabled = false;
     }
 }
 
-// 註冊 Service Worker
+// 註冊 Service Worker (PWA)
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
