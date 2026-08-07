@@ -1,7 +1,7 @@
 {
-  "name": "ChequeEasy 支票易 | HK Cheque Converter",
+  "name": "ChequeEasy 支票易 | Cheque Converter",
   "short_name": "ChequeEasy 支票易",
-  "description": "Enterprise-Grade HK Cheque Converter & HKMA Bank Directory | 香港支票中英文大寫轉換與金管局銀行代碼速查",
+  "description": "企業級支票中英文大寫轉換器。零資料洩漏風險，100% 用戶端本地運算，符合 ISO 27001 資安標準，支援 PWA 離線使用。Enterprise-grade Cheque Words Converter with zero data leakage risk.",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#003366",
@@ -31,9 +31,9 @@
       "icons": [{ "src": "ChequeEasyicon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "銀行代碼速查 / Bank Code API",
+      "name": "銀行代碼速查 / Bank Code Directory",
       "short_name": "Bank Code",
-      "description": "Lookup HKMA Licensed Bank Codes",
+      "description": "Lookup Licensed Bank Codes",
       "url": "./index.html#bank-code",
       "icons": [{ "src": "ChequeEasyicon-192.png", "sizes": "192x192" }]
     }
