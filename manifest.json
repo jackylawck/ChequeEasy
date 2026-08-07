@@ -1,0 +1,41 @@
+{
+  "name": "ChequeEasy 支票易 | HK Cheque Converter",
+  "short_name": "ChequeEasy 支票易",
+  "description": "Enterprise-Grade HK Cheque Converter & HKMA Bank Directory | 香港支票中英文大寫轉換與金管局銀行代碼速查",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#003366",
+  "theme_color": "#003366",
+  "orientation": "portrait",
+  "lang": "zh-HK",
+  "icons": [
+    {
+      "src": "ChequeEasyicon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "ChequeEasyicon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "支票大寫轉換 / Convert Cheque",
+      "short_name": "Cheque Convert",
+      "description": "Convert numbers into Chinese & English words",
+      "url": "./index.html#single-cheque",
+      "icons": [{ "src": "ChequeEasyicon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "銀行代碼速查 / Bank Code API",
+      "short_name": "Bank Code",
+      "description": "Lookup HKMA Licensed Bank Codes",
+      "url": "./index.html#bank-code",
+      "icons": [{ "src": "ChequeEasyicon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
