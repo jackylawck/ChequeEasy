@@ -34,7 +34,6 @@ const ChequeConverter = (() => {
         if (intBigInt === 0n) {
             chineseStr = '零元';
         } else {
-            // 切割為每 4 位一組（萬、億、兆）
             const groups = [];
             let temp = intStr;
             while (temp.length > 0) {
@@ -56,7 +55,6 @@ const ChequeConverter = (() => {
                     let zeroFlag = false;
                     const padded = grp.padStart(4, '0');
 
-                    // 若前面有較高位組，且當前組首位為零，或上一組結尾需補零
                     if (needLeadingZero || (i > 0 && padded[0] === '0')) {
                         grpStr += '零';
                     }
@@ -93,7 +91,7 @@ const ChequeConverter = (() => {
         const fen = decStr[1] ? parseInt(decStr[1], 10) : 0;
 
         if (jiao === 0 && fen === 0) {
-            chineseStr += (chineseStr === '零元' ? '正' : '正');
+            chineseStr += '正';
         } else {
             if (chineseStr === '零元') chineseStr = '';
             if (jiao > 0) chineseStr += ZH_DIGITS[jiao] + '角';
@@ -131,7 +129,6 @@ const ChequeConverter = (() => {
                 tempInt = tempInt / 1000n;
                 groupIdx++;
             }
-            // 銀行支票標準：用空白拼接，不使用逗號
             englishWords = groups.join(' ') + (intBigInt === 1n ? ' Dollar' : ' Dollars');
         }
 
@@ -277,7 +274,7 @@ const UIController = (() => {
         toast._timer = setTimeout(() => toast.classList.remove('show'), duration);
     };
 
-    // 金額轉換（包含嚴謹正則驗證）
+    // 金額轉換
     const handleConvert = () => {
         let val = DOM.amountInput.value.trim();
         if (!val) {
@@ -286,7 +283,6 @@ const UIController = (() => {
             return;
         }
 
-        // 嚴格過濾負數、科學記號與非數字字元
         if (!/^\d+(\.\d{0,2})?$/.test(val)) {
             if (val.includes('.') && val.split('.')[1].length > 2) {
                 showToast(currentLang === 'zh' ? '⚠️ 支票金額最多支援兩位小數（角、分）' : '⚠️ Maximum 2 decimal places allowed');
@@ -326,7 +322,7 @@ const UIController = (() => {
         }
     };
 
-    // 渲染銀行清單（含即時搜尋過濾）
+    // 渲染銀行清單
     const renderBanks = (filterText = '') => {
         const query = filterText.toLowerCase().trim();
         const filtered = allBanks.filter(b => 
@@ -368,9 +364,10 @@ const UIController = (() => {
         if (forceRefresh) showToast(currentLang === 'zh' ? `✅ 已同步最新資料 (${allBanks.length} 間)` : `✅ Updated (${allBanks.length} banks)`);
     };
 
-    // 語言切換（全局同步）
-    const handleLanguageToggle = () => {
-        currentLang = currentLang === 'zh' ? 'en' : 'zh';
+    // 套用語系更新（同步更新 HTML lang 標籤、所有文字與按鈕狀態）
+    const applyLanguage = (lang) => {
+        currentLang = lang;
+        document.documentElement.lang = currentLang === 'zh' ? 'zh-HK' : 'en';
         DOM.langToggleBtn.textContent = currentLang === 'zh' ? 'English' : '繁體中文';
 
         document.querySelectorAll('[data-zh][data-en]').forEach(elem => {
@@ -385,7 +382,36 @@ const UIController = (() => {
         if (allBanks.length > 0) renderBanks(DOM.bankSearchInput?.value || '');
     };
 
+    // 語言手動切換
+    const handleLanguageToggle = () => {
+        applyLanguage(currentLang === 'zh' ? 'en' : 'zh');
+    };
+
+    // 瀏覽器環境自動偵測語系
+    const detectInitialLanguage = () => {
+        const userPref = navigator.language || navigator.userLanguage || 'zh';
+        if (userPref.toLowerCase().startsWith('zh')) {
+            applyLanguage('zh');
+        } else {
+            applyLanguage('en');
+        }
+    };
+
+    // 註冊 PWA Service Worker (支援離線快取)
+    const registerServiceWorker = () => {
+        if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(() => console.log('PWA Service Worker active & ready for offline use.'))
+                    .catch((err) => console.warn('Service Worker registration skipped:', err.message));
+            });
+        }
+    };
+
     const init = () => {
+        detectInitialLanguage();
+        registerServiceWorker();
+
         DOM.amountInput.addEventListener('input', handleConvert);
         DOM.convertBtn.addEventListener('click', handleConvert);
         DOM.copyZhBtn.addEventListener('click', () => handleCopy(DOM.zhOutput, DOM.copyZhBtn));
@@ -397,24 +423,30 @@ const UIController = (() => {
             DOM.bankSearchInput.addEventListener('input', (e) => renderBanks(e.target.value));
         }
 
-        // Tab 切換
+        // Tab 切換與 ARIA 同步
         DOM.tabBtns.forEach(btn => {
             btn.addEventListener('click', () => {
-                DOM.tabBtns.forEach(b => b.classList.remove('active'));
+                DOM.tabBtns.forEach(b => {
+                    b.classList.remove('active');
+                    b.setAttribute('aria-selected', 'false');
+                });
                 DOM.tabContents.forEach(c => c.classList.remove('active'));
+                
                 btn.classList.add('active');
-                document.getElementById(btn.dataset.target).classList.add('active');
+                btn.setAttribute('aria-selected', 'true');
+                const targetPanel = document.getElementById(btn.dataset.target);
+                if (targetPanel) targetPanel.classList.add('active');
             });
         });
 
-        // 背景預載入銀行清單
+        // 預載銀行清單
         handleLoadBanks(false);
     };
 
     return { init };
 })();
 
-// 啟動應用與全域測試接口
+// 全域導出與安全初始化
 if (typeof window !== 'undefined') {
     window.ChequeConverter = ChequeConverter;
     document.addEventListener('DOMContentLoaded', UIController.init);
