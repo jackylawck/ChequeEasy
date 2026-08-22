@@ -22,6 +22,7 @@
     --text-main: #0f172a;
     --text-muted: #475569;
     --text-subtle: #64748b;
+    --text-result: #003366;
     --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
 
     /* 陰影與圓角 */
@@ -243,12 +244,13 @@ input[type="number"]:focus {
     transform: scale(0.98);
 }
 
-/* 輸出結果群組 */
+/* 輸出結果群組 (修正高對比度與 iOS Safari 淡化) */
 .output-group {
     margin-bottom: 20px;
 }
 
-.output-group h3 {
+.output-group h3,
+.section-subtitle {
     font-size: 0.9rem;
     color: var(--text-muted);
     margin-bottom: 6px;
@@ -258,8 +260,10 @@ input[type="number"]:focus {
 .result-box input {
     background-color: var(--bg-subtle);
     border-color: #cbd5e1;
-    font-weight: 600;
-    color: var(--primary-color);
+    font-weight: 700;
+    color: var(--text-result);
+    -webkit-text-fill-color: var(--text-result);
+    opacity: 1;
 }
 
 .copy-btn {
@@ -297,7 +301,8 @@ input[type="number"]:focus {
 /* ==========================================================================
    銀行代碼清單 (Bank Directory UI)
    ========================================================================== */
-#bank-code h2 {
+#bank-code h2,
+#bank-directory h2 {
     font-size: 1.25rem;
     color: var(--primary-color);
     margin-bottom: 16px;
@@ -402,6 +407,28 @@ input[type="number"]:focus {
 }
 
 /* ==========================================================================
+   Footer
+   ========================================================================== */
+.app-footer {
+    text-align: center;
+    padding: 24px 12px;
+    font-size: 0.85rem;
+    color: var(--text-subtle);
+    border-top: 1px solid var(--border-color);
+    margin-top: 48px;
+}
+
+.app-footer a {
+    color: var(--text-muted);
+    text-decoration: underline;
+    transition: var(--transition-fast);
+}
+
+.app-footer a:hover {
+    color: var(--primary-color);
+}
+
+/* ==========================================================================
    無障礙焦點增強 (Accessibility Focus States)
    ========================================================================== */
 button:focus-visible,
@@ -464,7 +491,7 @@ a:focus-visible {
 }
 
 /* ==========================================================================
-   深色模式支援 (Dark Mode via CSS Variables)
+   深色模式支援 (全面修正文字反差與高清晰度)
    ========================================================================== */
 @media (prefers-color-scheme: dark) {
     :root {
@@ -477,10 +504,26 @@ a:focus-visible {
         --text-main: #f8fafc;
         --text-muted: #cbd5e1;
         --text-subtle: #94a3b8;
+        --text-result: #38bdf8; /* 深色模式使用高亮亮天藍色 */
         
         --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
         --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
         --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.6);
+    }
+
+    input[type="text"],
+    input[type="number"] {
+        background-color: #0f172a;
+        color: #f8fafc;
+        border-color: #334155;
+    }
+
+    .result-box input {
+        background-color: #0b1120 !important;
+        border-color: #38bdf8 !important;
+        color: #38bdf8 !important;
+        -webkit-text-fill-color: #38bdf8 !important;
+        font-weight: 700;
     }
 
     .tab-btn {
@@ -491,6 +534,15 @@ a:focus-visible {
     .tab-btn.active {
         background: var(--bg-surface);
         color: #38bdf8;
+    }
+
+    .primary-btn {
+        background-color: #0284c7;
+        color: #ffffff;
+    }
+
+    .primary-btn:hover {
+        background-color: #0369a1;
     }
 
     .copy-btn {
@@ -506,11 +558,26 @@ a:focus-visible {
     .privacy-note {
         background-color: #0f172a;
         border-left-color: #38bdf8;
+        color: #cbd5e1;
+    }
+
+    #bank-code h2,
+    #bank-directory h2 {
+        color: #38bdf8;
+    }
+
+    .bank-card {
+        background: var(--bg-surface);
+        border-color: var(--border-color);
     }
 
     .bank-card:hover {
         border-color: #475569;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .app-footer a:hover {
+        color: #38bdf8;
     }
 }
 
@@ -545,6 +612,7 @@ a:focus-visible {
         border: 1px solid #000 !important;
         background: transparent !important;
         color: #000 !important;
+        -webkit-text-fill-color: #000 !important;
         font-size: 1.2rem !important;
     }
 }
